@@ -1,0 +1,12 @@
+server:
+  Port: :3000
+  ReadTimeout: 10
+  WriteTimeout: 10
+postgres:
+  PostgresqlHost: postgesql
+  PostgresqlPort: 5432
+  PostgresqlUser: postgres
+  PostgresqlPassword: postgres
+  PostgresqlDbname: eff_db
+  PostgresqlSslmode: false
+  PgDriver: pgx

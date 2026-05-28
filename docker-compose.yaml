@@ -7,5 +7,7 @@ services:
       dockerfile: ./docker/Dockerfile
     image: api
     container_name: api
+    environment:
+      - config=config
     ports:
       - "3000:3000"
