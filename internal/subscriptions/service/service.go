@@ -35,14 +35,17 @@ func NewSubService(subRepo repository.SubRepo, log *zap.SugaredLogger) SubServic
 func (s *subService) CreateSub(ctx context.Context, sub *models.Subscription) (*models.Subscription, error) {
 	createdSub, err := s.subRepo.CreateSub(ctx, sub)
 	if err != nil {
+		s.logger.Errorf("CreateSub: %v", err)
 		return nil, err
 	}
+	s.logger.Infow("subscription created", "id", createdSub.ID, "name", createdSub.Name)
 	return createdSub, nil
 }
 
 func (s *subService) GetSubByID(ctx context.Context, id uuid.UUID) (*models.Subscription, error) {
 	sub, err := s.subRepo.GetSubByID(ctx, id)
 	if err != nil {
+		s.logger.Errorf("GetSubByID: %v", err)
 		return nil, err
 	}
 	return sub, nil
@@ -51,8 +54,10 @@ func (s *subService) GetSubByID(ctx context.Context, id uuid.UUID) (*models.Subs
 func (s *subService) UpdateSubByID(ctx context.Context, sub *models.Subscription) (*models.Subscription, error) {
 	updated, err := s.subRepo.UpdateSubByID(ctx, sub)
 	if err != nil {
+		s.logger.Errorf("UpdateSubByID: %v", err)
 		return nil, err
 	}
+	s.logger.Infow("subscription updated", "id", updated.ID, "name", updated.Name)
 	return updated, nil
 }
 
@@ -60,14 +65,17 @@ func (s *subService) ListSubs(ctx context.Context, page, pageSize int) ([]models
 	offset := (page - 1) * pageSize
 	subs, total, err := s.subRepo.ListSubs(ctx, pageSize, offset)
 	if err != nil {
+		s.logger.Errorf("ListSubs: %v", err)
 		return nil, 0, err
 	}
+	s.logger.Infow("subscriptions listed", "page", page, "size", pageSize, "total", total)
 	return subs, total, nil
 }
 
 func (s *subService) CalculateCost(ctx context.Context, filter models.PeriodFilter) (*models.CostResponse, error) {
 	subs, err := s.subRepo.ListSubsForPeriod(ctx, filter)
 	if err != nil {
+		s.logger.Errorf("CalculateCost: %v", err)
 		return nil, err
 	}
 
@@ -136,7 +144,9 @@ func countMonths(start, end time.Time) int {
 func (s *subService) DeleteSubByID(ctx context.Context, id uuid.UUID) error {
 	err := s.subRepo.DeleteSubByID(ctx, id)
 	if err != nil {
+		s.logger.Errorf("DeleteSubByID: %v", err)
 		return err
 	}
+	s.logger.Infow("subscription deleted", "id", id)
 	return nil
 }

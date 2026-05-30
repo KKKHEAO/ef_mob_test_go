@@ -39,7 +39,7 @@ func (r *subRepository) CreateSub(ctx context.Context, sub *models.Subscription)
 		&u.StartDate, &u.EndDate, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
-		return nil, errors.New("Error during create subscription")
+		return nil, fmt.Errorf("create subscription: %w", err)
 	}
 
 	return u, nil
@@ -53,16 +53,24 @@ func (r *subRepository) GetSubByID(ctx context.Context, id uuid.UUID) (*models.S
 		&u.StartDate, &u.EndDate, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
-		return nil, errors.New("Error during get suscription by id")
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("get subscription by id: %w", err)
+		}
+		return nil, fmt.Errorf("get subscription by id: %w", err)
 	}
 
 	return u, nil
 }
 
 func (r *subRepository) DeleteSubByID(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.ExecContext(ctx, deleteSubscriptionByID, id)
+	res, err := r.db.ExecContext(ctx, deleteSubscriptionByID, id)
 	if err != nil {
-		return errors.New("Error during delete suscription by id")
+		return fmt.Errorf("delete subscription: %w", err)
+	}
+
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("delete subscription: %w", sql.ErrNoRows)
 	}
 
 	return nil
@@ -71,7 +79,7 @@ func (r *subRepository) DeleteSubByID(ctx context.Context, id uuid.UUID) error {
 func (r *subRepository) ListSubs(ctx context.Context, limit, offset int) ([]models.Subscription, int, error) {
 	rows, err := r.db.QueryContext(ctx, listSubscriptions, limit, offset)
 	if err != nil {
-		return nil, 0, errors.New("Error during list subscriptions")
+		return nil, 0, fmt.Errorf("list subscriptions: %w", err)
 	}
 	defer rows.Close()
 
@@ -82,14 +90,18 @@ func (r *subRepository) ListSubs(ctx context.Context, limit, offset int) ([]mode
 			&sub.ID, &sub.Name, &sub.Price, &sub.UserID,
 			&sub.StartDate, &sub.EndDate, &sub.CreatedAt, &sub.UpdatedAt,
 		); err != nil {
-			return nil, 0, errors.New("Error scanning subscription")
+			return nil, 0, fmt.Errorf("scan subscription: %w", err)
 		}
 		subs = append(subs, sub)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("rows iteration: %w", err)
+	}
+
 	var total int
 	if err := r.db.QueryRowContext(ctx, countSubscriptions).Scan(&total); err != nil {
-		return nil, 0, errors.New("Error counting subscriptions")
+		return nil, 0, fmt.Errorf("count subscriptions: %w", err)
 	}
 
 	return subs, total, nil
@@ -114,7 +126,7 @@ func (r *subRepository) ListSubsForPeriod(ctx context.Context, filter models.Per
 
 	rows, err := r.db.QueryContext(ctx, query, allArgs...)
 	if err != nil {
-		return nil, errors.New("Error during list subs for period")
+		return nil, fmt.Errorf("list subs for period: %w", err)
 	}
 	defer rows.Close()
 
@@ -125,9 +137,13 @@ func (r *subRepository) ListSubsForPeriod(ctx context.Context, filter models.Per
 			&sub.ID, &sub.Name, &sub.Price, &sub.UserID,
 			&sub.StartDate, &sub.EndDate,
 		); err != nil {
-			return nil, errors.New("Error scanning subscription")
+			return nil, fmt.Errorf("scan subscription: %w", err)
 		}
 		subs = append(subs, sub)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration: %w", err)
 	}
 
 	return subs, nil
@@ -144,7 +160,10 @@ func (r *subRepository) UpdateSubByID(ctx context.Context, sub *models.Subscript
 		&u.StartDate, &u.EndDate, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
-		return nil, errors.New("Error during update subscription")
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("update subscription: %w", err)
+		}
+		return nil, fmt.Errorf("update subscription: %w", err)
 	}
 
 	return u, nil

@@ -48,6 +48,8 @@ type SubHandler interface {
 // @Router       /subscriptions/{id} [get]
 func (h *subHandler) GetSubByID(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
+	h.logger.Infow("GET /subscriptions/{id}", "id", idStr)
+
 	if idStr == "" {
 		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "id is required"})
 		return
@@ -55,6 +57,7 @@ func (h *subHandler) GetSubByID(w http.ResponseWriter, r *http.Request) {
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
+		h.logger.Warnw("invalid uuid", "id", idStr)
 		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "invalid uuid format"})
 		return
 	}
@@ -64,6 +67,7 @@ func (h *subHandler) GetSubByID(w http.ResponseWriter, r *http.Request) {
 
 	sub, err := h.subService.GetSubByID(ctx, id)
 	if err != nil {
+		h.logger.Warnw("subscription not found", "id", id)
 		writeJSON(w, http.StatusNotFound, models.ErrorResponse{Error: "subscription not found"})
 		return
 	}
@@ -99,9 +103,12 @@ func (h *subHandler) CreateSub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.UserID == uuid.Nil {
+		h.logger.Warnw("user_id is required")
 		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "user_id is required"})
 		return
 	}
+
+	h.logger.Infow("creating subscription", "name", req.Name, "price", req.Price, "user_id", req.UserID)
 
 	startDate, err := time.Parse("2006-01-02", req.StartDate)
 	if err != nil {
@@ -164,6 +171,8 @@ func (h *subHandler) CreateSub(w http.ResponseWriter, r *http.Request) {
 // @Router       /subscriptions/{id} [put]
 func (h *subHandler) UpdateSubByID(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
+	h.logger.Infow("PUT /subscriptions/{id}", "id", idStr)
+
 	if idStr == "" {
 		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "id is required"})
 		return
@@ -229,7 +238,6 @@ func (h *subHandler) UpdateSubByID(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object}  models.ErrorResponse
 // @Router       /subscriptions [get]
 func (h *subHandler) ListSubs(w http.ResponseWriter, r *http.Request) {
-	// По дефолту
 	page := 1
 	pageSize := 10
 
@@ -243,6 +251,8 @@ func (h *subHandler) ListSubs(w http.ResponseWriter, r *http.Request) {
 			pageSize = v
 		}
 	}
+
+	h.logger.Infow("GET /subscriptions", "page", page, "page_size", pageSize)
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
@@ -287,6 +297,8 @@ func (h *subHandler) ListSubs(w http.ResponseWriter, r *http.Request) {
 func (h *subHandler) CalculateCost(w http.ResponseWriter, r *http.Request) {
 	periodStartStr := r.URL.Query().Get("period_start")
 	periodEndStr := r.URL.Query().Get("period_end")
+
+	h.logger.Infow("GET /subscriptions/cost", "period_start", periodStartStr, "period_end", periodEndStr)
 
 	if periodStartStr == "" || periodEndStr == "" {
 		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "period_start and period_end are required"})
@@ -352,6 +364,8 @@ func (h *subHandler) CalculateCost(w http.ResponseWriter, r *http.Request) {
 // @Router       /subscriptions/{id} [delete]
 func (h *subHandler) DeleteSubByID(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
+	h.logger.Infow("DELETE /subscriptions/{id}", "id", idStr)
+
 	if idStr == "" {
 		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "id is required"})
 		return
