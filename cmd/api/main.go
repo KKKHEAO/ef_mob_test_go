@@ -69,9 +69,10 @@ func main() {
 
 	srv := &http.Server{
 		Addr:         cfg.Server.Port,
-		Handler:      middleware.RequestID(mux),
+		Handler:      middleware.RequestID(middleware.Logging(appLog)(mux)),
 		ReadTimeout:  cfg.Server.ReadTimeout * time.Second,
 		WriteTimeout: cfg.Server.WriteTimeout * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	quit := make(chan os.Signal, 1)
