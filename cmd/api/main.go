@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"ef_mob_test_go/config"
+	"ef_mob_test_go/internal/middleware"
 	"ef_mob_test_go/internal/subscriptions/handler"
 	"ef_mob_test_go/internal/subscriptions/repository"
 	"ef_mob_test_go/internal/subscriptions/service"
@@ -58,11 +59,17 @@ func main() {
 	mux.HandleFunc("PUT /subscriptions/{id}", subHandler.UpdateSubByID)
 	mux.HandleFunc("DELETE /subscriptions/{id}", subHandler.DeleteSubByID)
 	mux.Handle("GET /swagger/{path...}", httpswagger.Handler())
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		if err := psqlDB.PingContext(r.Context()); err != nil {
+			http.Error(w, "database unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
 
-	// HTTP-сервер
 	srv := &http.Server{
 		Addr:         cfg.Server.Port,
-		Handler:      mux,
+		Handler:      middleware.RequestID(mux),
 		ReadTimeout:  cfg.Server.ReadTimeout * time.Second,
 		WriteTimeout: cfg.Server.WriteTimeout * time.Second,
 	}
