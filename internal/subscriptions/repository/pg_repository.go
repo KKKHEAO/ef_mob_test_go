@@ -84,11 +84,13 @@ func (r *subRepository) ListSubs(ctx context.Context, limit, offset int) ([]mode
 	defer rows.Close()
 
 	var subs []models.Subscription
+	var total int
 	for rows.Next() {
 		var sub models.Subscription
 		if err := rows.Scan(
 			&sub.ID, &sub.Name, &sub.Price, &sub.UserID,
 			&sub.StartDate, &sub.EndDate, &sub.CreatedAt, &sub.UpdatedAt,
+			&total,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan subscription: %w", err)
 		}
@@ -97,11 +99,6 @@ func (r *subRepository) ListSubs(ctx context.Context, limit, offset int) ([]mode
 
 	if err := rows.Err(); err != nil {
 		return nil, 0, fmt.Errorf("rows iteration: %w", err)
-	}
-
-	var total int
-	if err := r.db.QueryRowContext(ctx, countSubscriptions).Scan(&total); err != nil {
-		return nil, 0, fmt.Errorf("count subscriptions: %w", err)
 	}
 
 	return subs, total, nil

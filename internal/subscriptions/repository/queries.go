@@ -13,12 +13,10 @@ const (
 	updateSubscriptionByID = `UPDATE sh_eff.subscriptions SET name = $2, price = $3, end_date = $4, updated_at = CURRENT_TIMESTAMP
 	WHERE id = $1 RETURNING id, name, price, user_id, start_date, end_date, created_at, updated_at`
 
-	listSubscriptions = `SELECT id, name, price, user_id, start_date, end_date, created_at, updated_at
+	listSubscriptions = `SELECT id, name, price, user_id, start_date, end_date, created_at, updated_at, COUNT(*) OVER() AS total
 	FROM sh_eff.subscriptions
 	ORDER BY created_at DESC
 	LIMIT $1 OFFSET $2`
-
-	countSubscriptions = `SELECT COUNT(*) FROM sh_eff.subscriptions`
 
 	listSubsForPeriod = `SELECT id, name, price, user_id, start_date, end_date
 	FROM sh_eff.subscriptions
