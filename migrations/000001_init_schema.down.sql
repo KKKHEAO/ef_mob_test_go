@@ -1,3 +1,5 @@
-DROP TABLE sh_eff.subscriptions;
+DROP TABLE IF EXISTS sh_eff.subscriptions CASCADE;
 
-DROP SCHEMA  sh_eff;
+DROP SCHEMA IF EXISTS sh_eff CASCADE;
+
+DROP EXTENSION IF EXISTS "uuid-ossp";
