@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"ef_mob_test_go/internal/models"
@@ -33,6 +34,12 @@ func NewSubService(subRepo repository.SubRepo, log *zap.SugaredLogger) SubServic
 }
 
 func (s *subService) CreateSub(ctx context.Context, sub *models.Subscription) (*models.Subscription, error) {
+	id, err := uuid.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("generate uuid: %w", err)
+	}
+	sub.ID = id
+
 	createdSub, err := s.subRepo.CreateSub(ctx, sub)
 	if err != nil {
 		s.logger.Errorf("CreateSub: %v", err)

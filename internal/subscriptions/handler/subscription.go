@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -67,8 +68,12 @@ func (h *subHandler) GetSubByID(w http.ResponseWriter, r *http.Request) {
 
 	sub, err := h.subService.GetSubByID(ctx, id)
 	if err != nil {
-		h.logger.Warnw("subscription not found", "id", id)
-		writeJSON(w, http.StatusNotFound, models.ErrorResponse{Error: "subscription not found"})
+		if errors.Is(err, models.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, models.ErrorResponse{Error: "subscription not found"})
+			return
+		}
+		h.logger.Errorw("GetSubByID failed", "id", id, "err", err)
+		writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{Error: "failed to get subscription"})
 		return
 	}
 
@@ -131,10 +136,7 @@ func (h *subHandler) CreateSub(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	newUuid, _ := uuid.NewV7()
-
 	sub := &models.Subscription{
-		ID:        newUuid,
 		Name:      req.Name,
 		Price:     req.Price,
 		UserID:    req.UserID,
@@ -219,7 +221,12 @@ func (h *subHandler) UpdateSubByID(w http.ResponseWriter, r *http.Request) {
 		EndDate: endDate,
 	})
 	if err != nil {
-		writeJSON(w, http.StatusNotFound, models.ErrorResponse{Error: "subscription not found"})
+		if errors.Is(err, models.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, models.ErrorResponse{Error: "subscription not found"})
+			return
+		}
+		h.logger.Errorw("UpdateSubByID failed", "id", id, "err", err)
+		writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{Error: "failed to update subscription"})
 		return
 	}
 
@@ -381,6 +388,11 @@ func (h *subHandler) DeleteSubByID(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	if err := h.subService.DeleteSubByID(ctx, id); err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, models.ErrorResponse{Error: "subscription not found"})
+			return
+		}
+		h.logger.Errorw("DeleteSubByID failed", "id", id, "err", err)
 		writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{Error: "failed to delete subscription"})
 		return
 	}
@@ -388,7 +400,6 @@ func (h *subHandler) DeleteSubByID(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// TODO: вынести в helpers.go
 func toResponse(sub *models.Subscription) models.SubscriptionResponse {
 	var endDate *string
 	if sub.EndDate != nil {
@@ -414,6 +425,3 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	json.NewEncoder(w).Encode(v)
 }
 
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, models.ErrorResponse{Error: msg})
-}

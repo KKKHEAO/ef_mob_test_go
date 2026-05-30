@@ -54,7 +54,7 @@ func (r *subRepository) GetSubByID(ctx context.Context, id uuid.UUID) (*models.S
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("get subscription by id: %w", err)
+			return nil, fmt.Errorf("get subscription by id: %w", models.ErrNotFound)
 		}
 		return nil, fmt.Errorf("get subscription by id: %w", err)
 	}
@@ -70,7 +70,7 @@ func (r *subRepository) DeleteSubByID(ctx context.Context, id uuid.UUID) error {
 
 	rows, _ := res.RowsAffected()
 	if rows == 0 {
-		return fmt.Errorf("delete subscription: %w", sql.ErrNoRows)
+		return fmt.Errorf("delete subscription: %w", models.ErrNotFound)
 	}
 
 	return nil
@@ -161,7 +161,7 @@ func (r *subRepository) UpdateSubByID(ctx context.Context, sub *models.Subscript
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("update subscription: %w", err)
+			return nil, fmt.Errorf("update subscription: %w", models.ErrNotFound)
 		}
 		return nil, fmt.Errorf("update subscription: %w", err)
 	}

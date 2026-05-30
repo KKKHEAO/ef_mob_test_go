@@ -34,7 +34,7 @@ func main() {
 
 	appLog, err := logger.NewLogger(cfg)
 	if err != nil {
-		log.Fatalf("Error init logger %w", err)
+		log.Fatalf("Error init logger: %v", err)
 	}
 	defer appLog.Sync()
 
@@ -42,7 +42,7 @@ func main() {
 
 	psqlDB, err := postgres.NewSqlDB(cfg)
 	if err != nil {
-		appLog.Fatalf("Error init postgres %w", err)
+		appLog.Fatalf("Error init postgres: %v", err)
 	}
 	defer psqlDB.Close()
 
