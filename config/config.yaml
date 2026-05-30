@@ -1,12 +1,13 @@
 server:
+  AppEnv: development
   Port: :3000
   ReadTimeout: 10
   WriteTimeout: 10
 postgres:
-  PostgresqlHost: postgesql
+  PostgresqlHost: postgres
   PostgresqlPort: 5432
   PostgresqlUser: postgres
   PostgresqlPassword: postgres
   PostgresqlDbname: eff_db
-  PostgresqlSslmode: false
+  PostgresqlSSLMode: disable
   PgDriver: pgx
