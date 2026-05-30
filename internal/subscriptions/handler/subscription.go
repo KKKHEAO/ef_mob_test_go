@@ -15,6 +15,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const handlerTimeout = 5 * time.Second
+
 type subHandler struct {
 	subService service.SubService
 	logger     *zap.SugaredLogger
@@ -63,7 +65,7 @@ func (h *subHandler) GetSubByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), handlerTimeout)
 	defer cancel()
 
 	sub, err := h.subService.GetSubByID(ctx, id)
@@ -144,7 +146,7 @@ func (h *subHandler) CreateSub(w http.ResponseWriter, r *http.Request) {
 		EndDate:   endDate,
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), handlerTimeout)
 	defer cancel()
 
 	created, err := h.subService.CreateSub(ctx, sub)
@@ -211,7 +213,7 @@ func (h *subHandler) UpdateSubByID(w http.ResponseWriter, r *http.Request) {
 		endDate = &parsed
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), handlerTimeout)
 	defer cancel()
 
 	updated, err := h.subService.UpdateSubByID(ctx, &models.Subscription{
@@ -261,7 +263,7 @@ func (h *subHandler) ListSubs(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Infow("GET /subscriptions", "page", page, "page_size", pageSize)
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), handlerTimeout)
 	defer cancel()
 
 	subs, total, err := h.subService.ListSubs(ctx, page, pageSize)
@@ -347,7 +349,7 @@ func (h *subHandler) CalculateCost(w http.ResponseWriter, r *http.Request) {
 		filter.Name = &name
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), handlerTimeout)
 	defer cancel()
 
 	result, err := h.subService.CalculateCost(ctx, filter)
@@ -384,7 +386,7 @@ func (h *subHandler) DeleteSubByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), handlerTimeout)
 	defer cancel()
 
 	if err := h.subService.DeleteSubByID(ctx, id); err != nil {
