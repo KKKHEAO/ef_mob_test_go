@@ -86,7 +86,7 @@ func (s *subService) CalculateCost(ctx context.Context, filter models.PeriodFilt
 		return nil, err
 	}
 
-	var details []models.CostDetail
+	details := make([]models.CostDetail, 0, len(subs))
 	totalCost := 0
 
 	for _, sub := range subs {
