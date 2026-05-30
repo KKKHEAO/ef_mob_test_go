@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"ef_mob_test_go/config"
 	"fmt"
-	"log"
 	"time"
 
 	_ "github.com/jackc/pgx/stdlib"
@@ -27,7 +26,7 @@ func NewSqlDB(cfg *config.Config) (*sql.DB, error) {
 		cfg.Postgres.PostgresqlDbname,
 		cfg.Postgres.PostgresqlSSLMode,
 	)
-	log.Println(dsn)
+
 	db, err := sql.Open(cfg.Postgres.PgDriver, dsn)
 	if err != nil {
 		return nil, err
