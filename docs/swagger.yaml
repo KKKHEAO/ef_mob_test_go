@@ -1,5 +1,27 @@
 basePath: /
 definitions:
+  models.CostDetail:
+    properties:
+      active_months:
+        type: integer
+      cost:
+        type: integer
+      id:
+        type: string
+      name:
+        type: string
+      price:
+        type: integer
+    type: object
+  models.CostResponse:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/models.CostDetail'
+        type: array
+      total_cost:
+        type: integer
+    type: object
   models.CreateSubscriptionRequest:
     properties:
       end_date:
@@ -95,7 +117,7 @@ paths:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Список подписок
       tags:
-      - subscriptions
+      - subscriptions CRUDL
     post:
       consumes:
       - application/json
@@ -124,7 +146,7 @@ paths:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Создать подписку
       tags:
-      - subscriptions
+      - subscriptions CRUDL
   /subscriptions/{id}:
     delete:
       description: Удаляет подписку по её идентификатору
@@ -149,7 +171,7 @@ paths:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Удалить подписку
       tags:
-      - subscriptions
+      - subscriptions CRUDL
     get:
       description: Возвращает подписку по её идентификатору
       parameters:
@@ -179,7 +201,7 @@ paths:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Получить подписку по ID
       tags:
-      - subscriptions
+      - subscriptions CRUDL
     put:
       consumes:
       - application/json
@@ -217,5 +239,45 @@ paths:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Обновить подписку
       tags:
-      - subscriptions
+      - subscriptions CRUDL
+  /subscriptions/cost:
+    get:
+      description: Считает суммарную стоимость подписок за указанный период
+      parameters:
+      - description: Начало (YYYY-MM-DD)
+        in: query
+        name: period_start
+        required: true
+        type: string
+      - description: Конец (YYYY-MM-DD)
+        in: query
+        name: period_end
+        required: true
+        type: string
+      - description: Фильтр по ID пользователя
+        in: query
+        name: user_id
+        type: string
+      - description: Фильтр по названию
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CostResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Стоимость подписок за период
+      tags:
+      - subscriptions COST
 swagger: "2.0"

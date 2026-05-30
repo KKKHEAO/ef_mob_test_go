@@ -32,12 +32,13 @@ type SubHandler interface {
 	UpdateSubByID(w http.ResponseWriter, r *http.Request)
 	DeleteSubByID(w http.ResponseWriter, r *http.Request)
 	ListSubs(w http.ResponseWriter, r *http.Request)
+	CalculateCost(w http.ResponseWriter, r *http.Request)
 }
 
 // GetSubByID — GET /subscriptions/{id}
 // @Summary      Получить подписку по ID
 // @Description  Возвращает подписку по её идентификатору
-// @Tags         subscriptions
+// @Tags         subscriptions CRUDL
 // @Produce      json
 // @Param        id   path      string  true  "UUID подписки"
 // @Success      200  {object}  models.SubscriptionResponse
@@ -74,7 +75,7 @@ func (h *subHandler) GetSubByID(w http.ResponseWriter, r *http.Request) {
 // CreateSub создаёт новую подписку
 // @Summary      Создать подписку
 // @Description  Создаёт новую запись о подписке пользователя
-// @Tags         subscriptions
+// @Tags         subscriptions CRUDL
 // @Accept       json
 // @Produce      json
 // @Param        request body models.CreateSubscriptionRequest true "Данные подписки"
@@ -151,7 +152,7 @@ func (h *subHandler) CreateSub(w http.ResponseWriter, r *http.Request) {
 // UpdateSubByID — PUT /subscriptions/{id}
 // @Summary      Обновить подписку
 // @Description  Обновляет название, стоимость и дату окончания подписки
-// @Tags         subscriptions
+// @Tags         subscriptions CRUDL
 // @Accept       json
 // @Produce      json
 // @Param        id      path  string                        true  "UUID подписки"
@@ -220,7 +221,7 @@ func (h *subHandler) UpdateSubByID(w http.ResponseWriter, r *http.Request) {
 // ListSubs — GET /subscriptions
 // @Summary      Список подписок
 // @Description  Возвращает список подписок с пагинацией
-// @Tags         subscriptions
+// @Tags         subscriptions CRUDL
 // @Produce      json
 // @Param        page      query  int  false  "Номер страницы (по умолчанию 1)"  default(1)
 // @Param        page_size query  int  false  "Размер страницы (по умолчанию 10)"  default(10)
@@ -270,10 +271,79 @@ func (h *subHandler) ListSubs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// CalculateCost — GET /subscriptions/cost
+// @Summary      Стоимость подписок за период
+// @Description  Считает суммарную стоимость подписок за указанный период, если у подписки нет окончания, то считается количество месяцев от старта, до конца даты расчета
+// @Tags         subscriptions COST
+// @Produce      json
+// @Param        period_start  query  string  true   "Начало (YYYY-MM-DD)"
+// @Param        period_end    query  string  true   "Конец (YYYY-MM-DD)"
+// @Param        user_id       query  string  false  "Фильтр по ID пользователя"
+// @Param        name          query  string  false  "Фильтр по названию"
+// @Success      200  {object}  models.CostResponse
+// @Failure      400  {object}  models.ErrorResponse
+// @Failure      500  {object}  models.ErrorResponse
+// @Router       /subscriptions/cost [get]
+func (h *subHandler) CalculateCost(w http.ResponseWriter, r *http.Request) {
+	periodStartStr := r.URL.Query().Get("period_start")
+	periodEndStr := r.URL.Query().Get("period_end")
+
+	if periodStartStr == "" || periodEndStr == "" {
+		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "period_start and period_end are required"})
+		return
+	}
+
+	periodStart, err := time.Parse("2006-01-02", periodStartStr)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "period_start must be YYYY-MM-DD"})
+		return
+	}
+
+	periodEnd, err := time.Parse("2006-01-02", periodEndStr)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "period_end must be YYYY-MM-DD"})
+		return
+	}
+
+	if !periodEnd.After(periodStart) {
+		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "period_end must be after period_start"})
+		return
+	}
+
+	filter := models.PeriodFilter{
+		PeriodStart: periodStart,
+		PeriodEnd:   periodEnd,
+	}
+
+	if uidStr := r.URL.Query().Get("user_id"); uidStr != "" {
+		uid, err := uuid.Parse(uidStr)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "invalid user_id"})
+			return
+		}
+		filter.UserID = &uid
+	}
+
+	if name := r.URL.Query().Get("name"); name != "" {
+		filter.Name = &name
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	result, err := h.subService.CalculateCost(ctx, filter)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{Error: "failed to calculate cost"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
 // DeleteSubByID — DELETE /subscriptions/{id}
 // @Summary      Удалить подписку
 // @Description  Удаляет подписку по её идентификатору
-// @Tags         subscriptions
+// @Tags         subscriptions CRUDL
 // @Produce      json
 // @Param        id   path      string  true  "UUID подписки"
 // @Success      204

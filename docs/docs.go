@@ -22,7 +22,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "subscriptions"
+                    "subscriptions CRUDL"
                 ],
                 "summary": "Список подписок",
                 "parameters": [
@@ -65,7 +65,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "subscriptions"
+                    "subscriptions CRUDL"
                 ],
                 "summary": "Создать подписку",
                 "parameters": [
@@ -101,6 +101,66 @@ const docTemplate = `{
                 }
             }
         },
+        "/subscriptions/cost": {
+            "get": {
+                "description": "Считает суммарную стоимость подписок за указанный период",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscriptions COST"
+                ],
+                "summary": "Стоимость подписок за период",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Начало (YYYY-MM-DD)",
+                        "name": "period_start",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Конец (YYYY-MM-DD)",
+                        "name": "period_end",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Фильтр по ID пользователя",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Фильтр по названию",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.CostResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/subscriptions/{id}": {
             "get": {
                 "description": "Возвращает подписку по её идентификатору",
@@ -108,7 +168,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "subscriptions"
+                    "subscriptions CRUDL"
                 ],
                 "summary": "Получить подписку по ID",
                 "parameters": [
@@ -156,7 +216,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "subscriptions"
+                    "subscriptions CRUDL"
                 ],
                 "summary": "Обновить подписку",
                 "parameters": [
@@ -210,7 +270,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "subscriptions"
+                    "subscriptions CRUDL"
                 ],
                 "summary": "Удалить подписку",
                 "parameters": [
@@ -243,6 +303,40 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "models.CostDetail": {
+            "type": "object",
+            "properties": {
+                "active_months": {
+                    "type": "integer"
+                },
+                "cost": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.CostResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CostDetail"
+                    }
+                },
+                "total_cost": {
+                    "type": "integer"
+                }
+            }
+        },
         "models.CreateSubscriptionRequest": {
             "type": "object",
             "properties": {

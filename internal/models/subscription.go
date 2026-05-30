@@ -55,6 +55,26 @@ type PaginatedResponse struct {
 	TotalPages int                    `json:"total_pages"`
 }
 
+type PeriodFilter struct {
+	UserID      *uuid.UUID `json:"user_id,omitempty"`
+	Name        *string    `json:"name,omitempty"`
+	PeriodStart time.Time  `json:"period_start"`
+	PeriodEnd   time.Time  `json:"period_end"`
+}
+
+type CostDetail struct {
+	ID           uuid.UUID `json:"id"`
+	Name         string    `json:"name"`
+	Price        int32     `json:"price"`
+	ActiveMonths int       `json:"active_months"`
+	Cost         int       `json:"cost"`
+}
+
+type CostResponse struct {
+	TotalCost int          `json:"total_cost"`
+	Details   []CostDetail `json:"details"`
+}
+
 type ErrorResponse struct {
 	Error string `json:"error"`
 }

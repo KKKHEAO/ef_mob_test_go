@@ -53,6 +53,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /subscriptions", subHandler.CreateSub)
 	mux.HandleFunc("GET /subscriptions", subHandler.ListSubs)
+	mux.HandleFunc("GET /subscriptions/cost", subHandler.CalculateCost)
 	mux.HandleFunc("GET /subscriptions/{id}", subHandler.GetSubByID)
 	mux.HandleFunc("PUT /subscriptions/{id}", subHandler.UpdateSubByID)
 	mux.HandleFunc("DELETE /subscriptions/{id}", subHandler.DeleteSubByID)

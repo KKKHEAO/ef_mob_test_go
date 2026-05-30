@@ -19,4 +19,9 @@ const (
 	LIMIT $1 OFFSET $2`
 
 	countSubscriptions = `SELECT COUNT(*) FROM sh_eff.subscriptions`
+
+	listSubsForPeriod = `SELECT id, name, price, user_id, start_date, end_date
+	FROM sh_eff.subscriptions
+	WHERE 1=1
+	AND start_date <= $1 AND (end_date IS NULL OR end_date >= $2)`
 )
