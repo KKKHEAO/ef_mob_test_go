@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"ef_mob_test_go/config"
 	"ef_mob_test_go/internal/subscriptions/handler"
@@ -40,9 +44,33 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /subscriptions", subHandler.CreateSub)
 
-	// TODO: сделать graceful shutdown
-	appLog.Infof("Server listening on %s", cfg.Server.Port)
-	if err := http.ListenAndServe(cfg.Server.Port, mux); err != nil {
-		appLog.Fatalf("Server error: %v", err)
+	// HTTP-сервер
+	srv := &http.Server{
+		Addr:         cfg.Server.Port,
+		Handler:      mux,
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
 	}
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		appLog.Infof("Server listening on %s", cfg.Server.Port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			appLog.Fatalf("Server error: %v", err)
+		}
+	}()
+
+	sig := <-quit
+	appLog.Infof("Received signal: %v. Shutting down...", sig)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		appLog.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	appLog.Info("Server exited gracefully")
 }
