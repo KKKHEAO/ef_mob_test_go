@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"ef_mob_test_go/internal/models"
@@ -27,8 +28,60 @@ func NewSubHandler(subService service.SubService, logger *zap.SugaredLogger) Sub
 
 type SubHandler interface {
 	CreateSub(w http.ResponseWriter, r *http.Request)
+	GetSubByID(w http.ResponseWriter, r *http.Request)
+	UpdateSubByID(w http.ResponseWriter, r *http.Request)
+	DeleteSubByID(w http.ResponseWriter, r *http.Request)
+	ListSubs(w http.ResponseWriter, r *http.Request)
 }
 
+// GetSubByID — GET /subscriptions/{id}
+// @Summary      Получить подписку по ID
+// @Description  Возвращает подписку по её идентификатору
+// @Tags         subscriptions
+// @Produce      json
+// @Param        id   path      string  true  "UUID подписки"
+// @Success      200  {object}  models.SubscriptionResponse
+// @Failure      400  {object}  models.ErrorResponse
+// @Failure      404  {object}  models.ErrorResponse
+// @Failure      500  {object}  models.ErrorResponse
+// @Router       /subscriptions/{id} [get]
+func (h *subHandler) GetSubByID(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "id is required"})
+		return
+	}
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "invalid uuid format"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	sub, err := h.subService.GetSubByID(ctx, id)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, models.ErrorResponse{Error: "subscription not found"})
+		return
+	}
+
+	resp := toResponse(sub)
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// CreateSub создаёт новую подписку
+// @Summary      Создать подписку
+// @Description  Создаёт новую запись о подписке пользователя
+// @Tags         subscriptions
+// @Accept       json
+// @Produce      json
+// @Param        request body models.CreateSubscriptionRequest true "Данные подписки"
+// @Success      201  {object}  models.SubscriptionResponse
+// @Failure      400  {object}  models.ErrorResponse
+// @Failure      500  {object}  models.ErrorResponse
+// @Router       /subscriptions [post]
 func (h *subHandler) CreateSub(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateSubscriptionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -70,8 +123,10 @@ func (h *subHandler) CreateSub(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	newUuid, _ := uuid.NewV7()
+
 	sub := &models.Subscription{
-		ID:        uuid.New(),
+		ID:        newUuid,
 		Name:      req.Name,
 		Price:     req.Price,
 		UserID:    req.UserID,
@@ -91,6 +146,162 @@ func (h *subHandler) CreateSub(w http.ResponseWriter, r *http.Request) {
 
 	resp := toResponse(created)
 	writeJSON(w, http.StatusCreated, resp)
+}
+
+// UpdateSubByID — PUT /subscriptions/{id}
+// @Summary      Обновить подписку
+// @Description  Обновляет название, стоимость и дату окончания подписки
+// @Tags         subscriptions
+// @Accept       json
+// @Produce      json
+// @Param        id      path  string                        true  "UUID подписки"
+// @Param        request body  models.UpdateSubscriptionRequest true  "Новые данные"
+// @Success      200     {object}  models.SubscriptionResponse
+// @Failure      400     {object}  models.ErrorResponse
+// @Failure      404     {object}  models.ErrorResponse
+// @Failure      500     {object}  models.ErrorResponse
+// @Router       /subscriptions/{id} [put]
+func (h *subHandler) UpdateSubByID(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "id is required"})
+		return
+	}
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "invalid uuid format"})
+		return
+	}
+
+	var req models.UpdateSubscriptionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "invalid request body"})
+		return
+	}
+
+	if req.Name == "" {
+		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "name is required"})
+		return
+	}
+	if req.Price < 0 {
+		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "price must be >= 0"})
+		return
+	}
+
+	var endDate *time.Time
+	if req.EndDate != nil {
+		parsed, err := time.Parse("2006-01-02", *req.EndDate)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "end_date must be in YYYY-MM-DD format"})
+			return
+		}
+		endDate = &parsed
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	updated, err := h.subService.UpdateSubByID(ctx, &models.Subscription{
+		ID:      id,
+		Name:    req.Name,
+		Price:   req.Price,
+		EndDate: endDate,
+	})
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, models.ErrorResponse{Error: "subscription not found"})
+		return
+	}
+
+	resp := toResponse(updated)
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// ListSubs — GET /subscriptions
+// @Summary      Список подписок
+// @Description  Возвращает список подписок с пагинацией
+// @Tags         subscriptions
+// @Produce      json
+// @Param        page      query  int  false  "Номер страницы (по умолчанию 1)"  default(1)
+// @Param        page_size query  int  false  "Размер страницы (по умолчанию 10)"  default(10)
+// @Success      200  {object}  models.PaginatedResponse
+// @Failure      500  {object}  models.ErrorResponse
+// @Router       /subscriptions [get]
+func (h *subHandler) ListSubs(w http.ResponseWriter, r *http.Request) {
+	// По дефолту
+	page := 1
+	pageSize := 10
+
+	if p := r.URL.Query().Get("page"); p != "" {
+		if v, err := strconv.Atoi(p); err == nil && v > 0 {
+			page = v
+		}
+	}
+	if ps := r.URL.Query().Get("page_size"); ps != "" {
+		if v, err := strconv.Atoi(ps); err == nil && v > 0 && v <= 100 {
+			pageSize = v
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	subs, total, err := h.subService.ListSubs(ctx, page, pageSize)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{Error: "failed to list subscriptions"})
+		return
+	}
+
+	data := make([]models.SubscriptionResponse, 0, len(subs))
+	for _, sub := range subs {
+		data = append(data, toResponse(&sub))
+	}
+
+	totalPages := (total + pageSize - 1) / pageSize
+
+	resp := models.PaginatedResponse{
+		Data:       data,
+		Total:      total,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalPages: totalPages,
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// DeleteSubByID — DELETE /subscriptions/{id}
+// @Summary      Удалить подписку
+// @Description  Удаляет подписку по её идентификатору
+// @Tags         subscriptions
+// @Produce      json
+// @Param        id   path      string  true  "UUID подписки"
+// @Success      204
+// @Failure      400  {object}  models.ErrorResponse
+// @Failure      500  {object}  models.ErrorResponse
+// @Router       /subscriptions/{id} [delete]
+func (h *subHandler) DeleteSubByID(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "id is required"})
+		return
+	}
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "invalid uuid format"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	if err := h.subService.DeleteSubByID(ctx, id); err != nil {
+		writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{Error: "failed to delete subscription"})
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // TODO: вынести в helpers.go

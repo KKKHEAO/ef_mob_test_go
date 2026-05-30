@@ -36,6 +36,25 @@ type SubscriptionResponse struct {
 	UpdatedAt string    `json:"updated_at"`
 }
 
+type UpdateSubscriptionRequest struct {
+	Name    string  `json:"name"`
+	Price   int32   `json:"price"`
+	EndDate *string `json:"end_date,omitempty"`
+}
+
+type PaginationParams struct {
+	Page     int `json:"page"`
+	PageSize int `json:"page_size"`
+}
+
+type PaginatedResponse struct {
+	Data       []SubscriptionResponse `json:"data"`
+	Total      int                    `json:"total"`
+	Page       int                    `json:"page"`
+	PageSize   int                    `json:"page_size"`
+	TotalPages int                    `json:"total_pages"`
+}
+
 type ErrorResponse struct {
 	Error string `json:"error"`
 }

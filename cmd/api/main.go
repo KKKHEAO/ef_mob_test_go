@@ -1,3 +1,8 @@
+// @title           Subscription API
+// @version         1.0
+// @description     API для управления подписками пользователей
+// @host            localhost:3000
+// @BasePath        /
 package main
 
 import (
@@ -15,6 +20,10 @@ import (
 	"ef_mob_test_go/internal/subscriptions/service"
 	"ef_mob_test_go/pkg/logger"
 	"ef_mob_test_go/pkg/postgres"
+
+	_ "ef_mob_test_go/docs"
+
+	httpswagger "github.com/swaggo/http-swagger/v2"
 )
 
 func main() {
@@ -43,13 +52,18 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /subscriptions", subHandler.CreateSub)
+	mux.HandleFunc("GET /subscriptions", subHandler.ListSubs)
+	mux.HandleFunc("GET /subscriptions/{id}", subHandler.GetSubByID)
+	mux.HandleFunc("PUT /subscriptions/{id}", subHandler.UpdateSubByID)
+	mux.HandleFunc("DELETE /subscriptions/{id}", subHandler.DeleteSubByID)
+	mux.Handle("GET /swagger/{path...}", httpswagger.Handler())
 
 	// HTTP-сервер
 	srv := &http.Server{
 		Addr:         cfg.Server.Port,
 		Handler:      mux,
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
+		ReadTimeout:  cfg.Server.ReadTimeout * time.Second,
+		WriteTimeout: cfg.Server.WriteTimeout * time.Second,
 	}
 
 	quit := make(chan os.Signal, 1)
