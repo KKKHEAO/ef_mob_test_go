@@ -9,6 +9,9 @@ services:
     container_name: api
     environment:
       - config=config
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "3000:3000"
 
@@ -30,7 +33,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      
+
   migrate:
     image: migrate/migrate
     container_name: migrate
