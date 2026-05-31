@@ -242,7 +242,9 @@ paths:
       - subscriptions CRUDL
   /subscriptions/cost:
     get:
-      description: Считает суммарную стоимость подписок за указанный период
+      description: Считает суммарную стоимость подписок за указанный период, если
+        у подписки нет окончания, то считается количество месяцев от старта, до конца
+        даты расчета
       parameters:
       - description: Начало (YYYY-MM-DD)
         in: query

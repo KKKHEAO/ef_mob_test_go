@@ -37,9 +37,11 @@ services:
   migrate:
     image: migrate/migrate
     container_name: migrate
+    profiles: ["migrate"]
+    restart: on-failure
     volumes:
       - ./migrations:/migrations
-    command: [ "-path=/migrations", "-database=postgres://postgres:postgres@postgres:5432/eff_db?sslmode=disable", "up"]
+    command: ["-path=/migrations", "-database=postgres://postgres:postgres@postgres:5432/eff_db?sslmode=disable", "up"]
     depends_on:
       postgres:
         condition: service_healthy
